@@ -15,7 +15,12 @@ pygame.display.set_caption("Fruit Ninja")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("comicsansms", 36)
 
-background_img = pygame.image.load("assets/backgroundingame.png")
+background_img = pygame.image.load(random.choice([
+    "assets/backgroundingame-1.png",
+    "assets/backgroundingame-2.png",
+    "assets/backgroundingame-3.png",
+    "assets/backgroundingame-4.png"
+]))
 menu_img = pygame.image.load("assets/backgroundmenu.png")
 
 pygame.mixer.music.load("assets/background_musicc.mp3")
@@ -237,6 +242,12 @@ while running:
                 fruit_list.clear()
                 particles.clear()
                 score = combo = 0
+                background_img = pygame.image.load(random.choice([
+                    "assets/backgroundingame-1.png",
+                    "assets/backgroundingame-2.png",
+                    "assets/backgroundingame-3.png",
+                    "assets/backgroundingame-4.png"
+                ]))
                 state = PLAYING
 
     if state == MENU:
