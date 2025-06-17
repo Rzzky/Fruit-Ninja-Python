@@ -15,8 +15,8 @@ pygame.display.set_caption("Fruit Ninja")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("comicsansms", 36)
 
-background_img = pygame.image.load("assets/background.png")
-menu_img = pygame.image.load("assets/menu.png")
+background_img = pygame.image.load("assets/backgroundingame.png")
+menu_img = pygame.image.load("assets/backgroundmenu.png")
 
 pygame.mixer.music.load("assets/background_musicc.mp3")
 pygame.mixer.music.set_volume(0.4)
@@ -24,7 +24,7 @@ pygame.mixer.music.play(-1)
 
 slice_sound = pygame.mixer.Sound("assets/slice.mp3")
 combo_sound = pygame.mixer.Sound("assets/combo.wav")
-bomb_fuse_sound = pygame.mixer.Sound("assets/Bomb-Fuse.wav")
+bomb_fuse_sound = pygame.mixer.Sound("assets/bomb-fuse.wav")
 bomb_explode_sound = pygame.mixer.Sound("assets/bomb-explode.mp3")
 combo_sounds = [pygame.mixer.Sound(f"assets/combo-{i}.wav") for i in range(1, 9)]
 
@@ -69,7 +69,7 @@ def spawn_fruit():
     is_bomb = random.random() < min(0.05 + combo * 0.02, 0.5)
     fruit_list.append({
         "rect": rect,
-        "dy": -random.uniform(18.0, 22.0),
+        "dy": -random.uniform(20.0, 24.0),
         "is_bomb": is_bomb,
         "sliced": False,
         "slice_timer": 0,
@@ -77,10 +77,33 @@ def spawn_fruit():
         "fuse_played": False
     })
 
+button_start_img = pygame.transform.scale(pygame.image.load("assets/startgame.png").convert_alpha(), (300, 200))
+button_quit_img = pygame.transform.scale(pygame.image.load("assets/quitgame.png").convert_alpha(), (300, 200))
+
+def draw_button(rect, text, hover=False):
+    if text == "START GAME":
+        image = button_start_img.copy()
+    elif text == "QUIT":
+        image = button_quit_img.copy()
+    else:
+        image = button_start_img.copy()
+    if hover:
+        image.set_alpha(255)
+    else:
+        image.set_alpha(200)
+    screen.blit(image, rect.topleft)
+
+start_btn_rect = button_start_img.get_rect(center=(WIDTH//2, 300))
+quit_btn_rect = button_quit_img.get_rect(center=(WIDTH//2, 420))
+
 def draw_menu():
     screen.blit(menu_img, (0, 0))
-    title = font.render("Press SPACE to Start", True, WHITE)
-    screen.blit(title, (WIDTH//2 - title.get_width()//2, HEIGHT - 100))
+    mx, my = pygame.mouse.get_pos()
+    hover_start = start_btn_rect.collidepoint(mx, my)
+    hover_quit = quit_btn_rect.collidepoint(mx, my)
+
+    draw_button(start_btn_rect, "START GAME", hover_start)
+    draw_button(quit_btn_rect, "QUIT", hover_quit)
 
 def draw_game():
     screen.blit(background_img, (0, 0))
@@ -104,8 +127,21 @@ def draw_game():
 
 def draw_game_over():
     screen.fill(BLACK)
-    screen.blit(font.render("GAME OVER", True, WHITE), (WIDTH//2 - 100, HEIGHT//2 - 30))
-    screen.blit(font.render("Press SPACE to Restart", True, WHITE), (WIDTH//2 - 170, HEIGHT//2 + 20))
+    game_over_text = font.render("GAME OVER", True, WHITE)
+    screen.blit(game_over_text, (WIDTH//2 - game_over_text.get_width()//2, 120))
+
+    final_score = font.render(f"Final Score: {score}", True, WHITE)
+    screen.blit(final_score, (WIDTH//2 - final_score.get_width()//2, 200))
+
+    high_score = max(score, load_high_score())
+    high_score_text = font.render(f"High Score: {high_score}", True, WHITE)
+    screen.blit(high_score_text, (WIDTH//2 - high_score_text.get_width()//2, 250))
+
+    combo_text = font.render(f"Combo: x{combo}", True, (255, 255, 0))
+    screen.blit(combo_text, (WIDTH//2 - combo_text.get_width()//2, 300))
+    
+    restart_text = font.render("Press SPACE to Restart", True, WHITE)
+    screen.blit(restart_text, (WIDTH//2 - restart_text.get_width()//2, 400))
 
 def update_game():
     global combo, combo_timer, state
@@ -142,6 +178,10 @@ def handle_slice():
                 if fruit["is_bomb"]:
                     bomb_fuse_sound.stop()
                     bomb_explode_sound.play()
+                    pygame.mixer.music.stop()
+                    pygame.mixer.music.load("assets/gameover.mp3")
+                    pygame.mixer.music.play()
+                    save_high_score(score)
                     state = GAME_OVER
                     return
                 slice_sound.play()
@@ -157,6 +197,19 @@ def spawn_particles(pos):
     for _ in range(10):
         particles.append({"x": pos[0], "y": pos[1], "dx": random.uniform(-2, 2), "dy": random.uniform(-2, 2), "radius": random.randint(3, 6)})
 
+def load_high_score():
+    try:
+        with open("highscore.txt", "r") as file:
+            return int(file.read())
+    except:
+        return 0
+
+def save_high_score(new_score):
+    if new_score > load_high_score():
+        with open("highscore.txt", "w") as file:
+            file.write(str(new_score))
+
+# Game loop
 running = True
 while running:
     clock.tick(FPS)
@@ -164,6 +217,17 @@ while running:
     mouse_pressed = pygame.mouse.get_pressed()[0]
 
     for event in pygame.event.get():
+        if state == MENU and event.type == pygame.MOUSEBUTTONDOWN:
+            if start_btn_rect.collidepoint(event.pos):
+                fruit_list.clear()
+                particles.clear()
+                score = combo = 0
+                pygame.mixer.music.load("assets/background_musicc.mp3")
+                pygame.mixer.music.play(-1)
+                save_high_score(score)
+                state = PLAYING
+            elif quit_btn_rect.collidepoint(event.pos):
+                running = False
         if event.type == pygame.QUIT:
             running = False
         elif event.type == SPAWN_EVENT and state == PLAYING:
